@@ -95,6 +95,11 @@ class ShopAdmin extends \yii\db\ActiveRecord {
         $this->scenario = 'seekpass';
         if ($this->load($data) && $this->validate()) {
             //发送邮件
+            Yii::$app->mailer->compose('contact/html', ['contactForm' => $form])
+                    ->setFrom('from@domain.com')
+                    ->setTo($form->email)
+                    ->setSubject($form->subject)
+                    ->send();
         }
     }
 
