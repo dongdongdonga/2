@@ -25,7 +25,7 @@ class ShopAdmin extends \yii\db\ActiveRecord {
         return 'shop_admin';
     }
 
-    //提交到数据库前执行简单的验证
+//提交到数据库前执行简单的验证
     public function rules() {
         return [
             ['adminuser', 'required', 'message' => '管理员帐号不能为空',
@@ -41,14 +41,14 @@ class ShopAdmin extends \yii\db\ActiveRecord {
     }
 
     public function validatePass() {
-        //判断之前是否有错误，再查询adminuser及adminpass
+//判断之前是否有错误，再查询adminuser及adminpass
         if (!$this->hasErrors()) {
-            //用索引adminuser+adminpass
+//用索引adminuser+adminpass
             $data = self::find()->where('adminuser= :user and adminpass = :pass', [
                         ":user" => $this->adminuser, ":pass" => md5($this->adminpass)
                     ])->one();
 
-            //根据$data返回类型判断，为空报错
+//根据$data返回类型判断，为空报错
             if (is_null($data)) {
                 $this->addError("adminpass", "用户名或密码错误");
             }
@@ -67,40 +67,43 @@ class ShopAdmin extends \yii\db\ActiveRecord {
     }
 
     public function login($data) {
-        //场景声明，场景不同验证规则不同
+//场景声明，场景不同验证规则不同
         $this->scenario = "login";
 
-        //如果载入成功并且验证成功,validate指rules的验证
+//如果载入成功并且验证成功,validate指rules的验证
         if ($this->load($data) && $this->validate()) {
 
-            //勾选‘记住我’则设置session有效期为lifetime）
+//勾选‘记住我’则设置session有效期为lifetime）
             $session = Yii::$app->session;
             $lifetime = $this->rememberMe ? 24 * 3600 : 0;
             session_set_cookie_params($lifetime);
 
-            //写入session
+//写入session
             $session['admin'] = ['adminuser' => $this->adminuser,
                 'isLogin' => 1,];
 
-            //更新登录时间/IP
+//更新登录时间/IP
             $this->updateAll(['logintime' => time(), 'loginip' => ip2long(Yii::$app->request->userIP)], 'adminuser= :user', [':user' => $this->adminuser]);
 
-            //写入成功与否，返回 强转为bool 的类型
+//写入成功与否，返回 强转为bool 的类型
             return (bool) $session['admin']['isLogin'];
         }
-        return FALSE;
+        return false;
     }
 
     public function seekPass($data) {
-        $this->scenario = 'seekpass';
+        $this->scenario = "seekpass";
         if ($this->load($data) && $this->validate()) {
-            //发送邮件
-            Yii::$app->mailer->compose('contact/html', ['contactForm' => $form])
-                    ->setFrom('from@domain.com')
-                    ->setTo($form->email)
-                    ->setSubject($form->subject)
-                    ->send();
+//发送邮件,compose类似render方法，渲染/mail/seekpass
+            $mailer = Yii::$app->mailer->compose();
+            $mailer->setFrom("lp_vitadolce@163.com");
+            $mailer->setTo($data['ShopAdmin']['adminemail']);
+            $mailer->setSubject("找回密码邮件");
+            if ($mailer->send()) {
+                return true;
+            }
         }
+        return false;
     }
 
     public function attributeLabels() {

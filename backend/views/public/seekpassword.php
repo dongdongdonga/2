@@ -47,20 +47,25 @@ use yii\helpers\Html;
             <div class="span4 box">
                 <div class="content-wrap">
                     <h6>vitaweb - 找回密码</h6>
+
+                    <?php
+                    if (Yii::$app->session->hasFlash('info')) {
+                        echo Yii::$app->session->getFlash('info');
+                    }
+                    ?>
                     <?php
                     echo $form->field($model, 'adminuser')
                             ->textInput(["class" => "span12", "placeholder" => "占位符", 'autofocus' => true]);
                     echo $form->field($model, 'adminemail')
-                            ->textInput(["class" => "span12", "placeholder" => "验证邮箱"]);
+                            ->textInput(["class" => "span12", "placeholder" => "电子邮箱"]);
                     ?>
-                  
-                    <a href = "<?php echo yii\helpers\Url::to(['public/login']); ?>
+
+                    <a href = "<?php echo yii\helpers\Url::to(['public/seekpassword']); ?>
                        " class = "forgot">返回登录</a>
                     <?php
-                    //按钮
                     echo Html::submitButton('找回密码', ["class" => "btn-glow primary login"])
                     ?>
-                    <?php ActiveForm::end(); ?>
+<?php ActiveForm::end(); ?>
                 </div>
             </div>
             、
