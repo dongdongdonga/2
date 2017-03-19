@@ -40,16 +40,15 @@ class PublicController extends \yii\web\Controller {
 
     public function actionSeekpassword() {
         $this->layout = false;
-        //在控制器中连接数据库
         $model = new ShopAdmin();
-
         if (Yii::$app->request->isPost) {
             $post = Yii::$app->request->post();
             if ($model->seekPass($post)) {
                 Yii::$app->session->setFlash('info', '邮件已发送，请查收');
             }
         }
-        return $this->render("seekpassword", ['model' => $model]);
+        return $this->render('seekpassword', ['model' => $model]);
     }
 
+    //自定义token生成方法
 }

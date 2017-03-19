@@ -19,6 +19,7 @@ class ShopAdmin extends \yii\db\ActiveRecord {
 
 //为“记住我“创建一个新的方法,并且默认打开
     public $rememberMe = true;
+    public $repass;
 
 //（gii）连接数据库中的表shop_admin
     public static function tableName() {
@@ -30,13 +31,16 @@ class ShopAdmin extends \yii\db\ActiveRecord {
         return [
             ['adminuser', 'required', 'message' => '管理员帐号不能为空',
                 //指定验证规则启用的场景
-                'on' => ['login', 'seekpass']],
-            ['adminpass', 'required', 'message' => '管理员密码不能为空', 'on' => 'login'],
+                'on' => ['login', 'seekpass', 'changepass']],
+            ['adminpass', 'required', 'message' => '管理员密码不能为空', 'on' => ['login', 'changepass']],
             ['rememberMe', 'boolean', 'on' => 'login'],
             ['adminpass', 'validatePass', 'on' => 'login'],
             ['adminemail', 'required', 'message' => '邮箱不能为空', 'on' => 'seekpass'],
             ['adminemail', 'email', 'message' => '邮箱格式不正确', 'on' => 'seekpass'],
-            ['adminemail', 'validateEmail', 'on' => 'seekpass']
+            ['adminemail', 'validateEmail', 'on' => 'seekpass'],
+            //声明repass的验证方法：和adminpass对比
+            ['repass', 'required', 'message' => '新密码不能为空', 'on' => 'changepass'],
+            ['repass', 'compare', 'compareAttribute' => 'adminpass', 'message' => '两次密码输入不一致', 'on' => 'changepass'],
         ];
     }
 
@@ -47,7 +51,6 @@ class ShopAdmin extends \yii\db\ActiveRecord {
             $data = self::find()->where('adminuser= :user and adminpass = :pass', [
                         ":user" => $this->adminuser, ":pass" => md5($this->adminpass)
                     ])->one();
-
 //根据$data返回类型判断，为空报错
             if (is_null($data)) {
                 $this->addError("adminpass", "用户名或密码错误");
@@ -69,22 +72,17 @@ class ShopAdmin extends \yii\db\ActiveRecord {
     public function login($data) {
 //场景声明，场景不同验证规则不同
         $this->scenario = "login";
-
 //如果载入成功并且验证成功,validate指rules的验证
         if ($this->load($data) && $this->validate()) {
-
 //勾选‘记住我’则设置session有效期为lifetime）
             $session = Yii::$app->session;
             $lifetime = $this->rememberMe ? 24 * 3600 : 0;
             session_set_cookie_params($lifetime);
-
 //写入session
             $session['admin'] = ['adminuser' => $this->adminuser,
                 'isLogin' => 1,];
-
 //更新登录时间/IP
             $this->updateAll(['logintime' => time(), 'loginip' => ip2long(Yii::$app->request->userIP)], 'adminuser= :user', [':user' => $this->adminuser]);
-
 //写入成功与否，返回 强转为bool 的类型
             return (bool) $session['admin']['isLogin'];
         }
@@ -94,14 +92,32 @@ class ShopAdmin extends \yii\db\ActiveRecord {
     public function seekPass($data) {
         $this->scenario = "seekpass";
         if ($this->load($data) && $this->validate()) {
-//发送邮件,compose类似render方法，渲染/mail/seekpass
-            $mailer = Yii::$app->mailer->compose();
+            //发送的邮件中将包含时间，签名
+            $time = time();
+            $token = $this->createToken($data['ShopAdmin']['adminuser'], $time);
+            //发送邮件,compose()类似render()，渲染/mail/seekpass.?（mail放在backend,config在common/下设置）
+//            $mailer = Yii::$app->mailer->compose();
+            $mailer = Yii::$app->mailer->compose('seekpass', ['adminuser' => $data['ShopAdmin']['adminuser'], 'time' => $time, 'token' => $token]);
             $mailer->setFrom("lp_vitadolce@163.com");
             $mailer->setTo($data['ShopAdmin']['adminemail']);
             $mailer->setSubject("找回密码邮件");
             if ($mailer->send()) {
                 return true;
             }
+        }
+        return false;
+    }
+
+    //自定义token生成方法
+    public function createToken($adminuser, $time) {
+        return md5(md5($adminuser) . base64_decode(Yii::$app->request->userIP) . md5($time));
+    }
+
+    public function changePass($data) {
+        $this->scenario = 'changepass';
+        if ($this->load($data) && $this->validate()) {
+            //修改密码 updateAll($attributes, $condition)
+            return (bool) $this->updateAll(['adminpass' => md5($this->adminpass)], 'adminuser = :user', [':user' => $this->adminuser]);
         }
         return false;
     }
