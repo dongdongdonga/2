@@ -35,7 +35,7 @@ class PublicController extends \yii\web\Controller {
             Yii::$app->end();
         }
         //否则跳回来的页面
-        $this->goBack();
+        $this->goBack(); 
     }
 
     public function actionSeekpassword() {
